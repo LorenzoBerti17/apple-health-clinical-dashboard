@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apple Health Clinical Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Apple Health <span>Clinical Dashboard</span></h1>
+    <div class="header-meta">
+      Dec 01, 2025 –
+      May 01, 2026
+      &nbsp;·&nbsp;
+      1,871 records
+      &nbsp;·&nbsp;
+      Generated 2026-05-14
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="tab-cardio">Cardio</button>
+    <button class="tab-btn" data-tab="tab-sleep">Sleep</button>
+    <button class="tab-btn" data-tab="tab-activity">Activity</button>
+    <button class="tab-btn" data-tab="tab-running">Running</button>
+    <button class="tab-btn" data-tab="tab-audio">Audio</button>
+    <button class="tab-btn" data-tab="tab-gait">Gait</button>
+  </nav>
+
+  <!-- ────────────────────── CARDIO ────────────────────────────── -->
+  <section id="tab-cardio" class="tab-pane active">
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Resting HR</div>
+        <div class="kpi-value" id="kpi-rhr">—</div>
+        <div class="kpi-sub">daily average <span id="trend-rhr"></span></div>
+        <span id="badge-rhr" class="kpi-badge">—</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">HRV (SDNN)</div>
+        <div class="kpi-value" id="kpi-hrv">—</div>
+        <div class="kpi-sub">overnight avg <span id="trend-hrv"></span></div>
+        <span id="badge-hrv" class="kpi-badge">—</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">VO₂max</div>
+        <div class="kpi-value" id="kpi-vo2">—</div>
+        <div class="kpi-sub">latest estimate</div>
+        <span id="badge-vo2" class="kpi-badge">—</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">HR Max (Tanaka)</div>
+        <div class="kpi-value" id="kpi-hrmax">—</div>
+        <div class="kpi-sub">208 − 0.7 × age</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Resting HR — 30-day rolling</h3>
+        <div class="chart-wrap"><canvas id="chart-rhr"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>HRV (SDNN) — 30-day rolling</h3>
+        <div class="chart-wrap"><canvas id="chart-hrv"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>VO₂max estimates over time</h3>
+        <div class="chart-wrap"><canvas id="chart-vo2"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.25rem">
+      <h3>Clinical References</h3>
+      <table class="data-table">
+        <thead><tr><th>Metric</th><th>Threshold</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Resting HR athletic</td><td>&lt; 60 bpm</td><td>Standard cardiology consensus</td></tr>
+          <tr><td>HRV p50 (male &lt;30y)</td><td>55 ms SDNN</td><td>Umetani et al. 1998; Shaffer &amp; Ginsberg 2017</td></tr>
+          <tr><td>VO₂max excellent (male 20-29)</td><td>50–56 mL/kg/min</td><td>Cooper Institute, 2010</td></tr>
+          <tr><td>HR max formula</td><td>208 − 0.7 × age (Tanaka)</td><td>Tanaka et al. J Am Coll Cardiol 2001</td></tr>
+          <tr><td>HR Recovery 1 min</td><td>&le;12 bpm = abnormal</td><td>Cole et al. NEJM 1999</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ────────────────────── SLEEP ──────────────────────────────── -->
+  <section id="tab-sleep" class="tab-pane">
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Sleep Duration</div>
+        <div class="kpi-value" id="kpi-sleep-dur">—</div>
+        <div class="kpi-sub">nightly average</div>
+        <span id="badge-sleep-dur" class="kpi-badge">—</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Sleep Efficiency</div>
+        <div class="kpi-value" id="kpi-sleep-eff">—</div>
+        <div class="kpi-sub">asleep / in-bed time</div>
+        <span id="badge-sleep-eff" class="kpi-badge">—</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Deep Sleep</div>
+        <div class="kpi-value" id="kpi-deep">—</div>
+        <div class="kpi-sub">target 13–23%</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">REM Sleep</div>
+        <div class="kpi-value" id="kpi-rem">—</div>
+        <div class="kpi-sub">target 20–25%</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Nights tracked</div>
+        <div class="kpi-value" id="kpi-nights">—</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Sleep Duration — nightly</h3>
+        <div class="chart-wrap"><canvas id="chart-sleep-duration"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Sleep Stage Breakdown</h3>
+        <div class="chart-wrap"><canvas id="chart-sleep-stages"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.25rem">
+      <h3>Clinical References</h3>
+      <table class="data-table">
+        <thead><tr><th>Metric</th><th>Target</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Sleep duration</td><td>7–9 h</td><td>Hirshkowitz et al. Sleep Health 2015 (NSF); Watson et al. JCSM 2015 (AASM)</td></tr>
+          <tr><td>Deep (N3) sleep</td><td>13–23% of TST</td><td>AASM scoring manual</td></tr>
+          <tr><td>REM sleep</td><td>20–25% of TST</td><td>AASM scoring manual</td></tr>
+          <tr><td>Sleep efficiency</td><td>&gt; 85%</td><td>Standard clinical threshold</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ────────────────────── ACTIVITY ───────────────────────────── -->
+  <section id="tab-activity" class="tab-pane">
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Daily Steps</div>
+        <div class="kpi-value" id="kpi-steps">—</div>
+        <div class="kpi-sub" id="kpi-steps-pct">— of goal <span id="trend-steps"></span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Active Energy</div>
+        <div class="kpi-value" id="kpi-energy">—</div>
+        <div class="kpi-sub">daily average</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Exercise Time</div>
+        <div class="kpi-value" id="kpi-exercise">—</div>
+        <div class="kpi-sub">daily average</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Total Distance</div>
+        <div class="kpi-value" id="kpi-distance">—</div>
+        <div class="kpi-sub">walk + run</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Daily Steps</h3>
+        <div class="chart-wrap"><canvas id="chart-steps"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Active Energy (kcal)</h3>
+        <div class="chart-wrap"><canvas id="chart-energy"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── RUNNING ────────────────────────────── -->
+  <section id="tab-running" class="tab-pane">
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Total Runs</div>
+        <div class="kpi-value" id="kpi-runs">—</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Total Distance</div>
+        <div class="kpi-value" id="kpi-run-dist">—</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Avg Pace</div>
+        <div class="kpi-value" id="kpi-pace">—</div>
+        <div class="kpi-sub">min/km</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Longest Run</div>
+        <div class="kpi-value" id="kpi-longest">—</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Run Distance over Time</h3>
+        <div class="chart-wrap"><canvas id="chart-run-dist"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Pace Trend</h3>
+        <div class="chart-wrap"><canvas id="chart-pace"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── AUDIO ──────────────────────────────── -->
+  <section id="tab-audio" class="tab-pane">
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Env. Audio Exposure</div>
+        <div class="kpi-value" id="kpi-audio-env">—</div>
+        <div class="kpi-sub">daily average</div>
+        <span id="badge-audio-env" class="kpi-badge">—</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Headphone Audio</div>
+        <div class="kpi-value" id="kpi-audio-hp">—</div>
+        <div class="kpi-sub">daily average</div>
+        <span id="badge-audio-hp" class="kpi-badge">—</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Time above 70 dB</div>
+        <div class="kpi-value" id="kpi-audio-pct">—</div>
+        <div class="kpi-sub">% of measurements</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Environmental Noise Exposure</h3>
+        <div class="chart-wrap"><canvas id="chart-audio"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.25rem">
+      <h3>WHO 1999 Noise Guidelines</h3>
+      <table class="data-table">
+        <thead><tr><th>Level</th><th>Risk</th></tr></thead>
+        <tbody>
+          <tr><td>&lt; 70 dB(A)</td><td>Safe for chronic exposure</td></tr>
+          <tr><td>85 dB(A)</td><td>Hearing risk if &gt;40h/week (WHO 1999)</td></tr>
+          <tr><td>100 dB(A)</td><td>Hearing risk after 15 minutes</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ────────────────────── GAIT ───────────────────────────────── -->
+  <section id="tab-gait" class="tab-pane">
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Walking Speed</div>
+        <div class="kpi-value" id="kpi-gait-speed">—</div>
+        <div class="kpi-sub">target &gt;1.0 m/s</div>
+        <span id="badge-gait-speed" class="kpi-badge">—</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Double Support</div>
+        <div class="kpi-value" id="kpi-double-support">—</div>
+        <div class="kpi-sub">normal 20–30%</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Step Asymmetry</div>
+        <div class="kpi-value" id="kpi-asymmetry">—</div>
+        <div class="kpi-sub">clinical threshold &lt;3%</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Step Length</div>
+        <div class="kpi-value" id="kpi-step-length">—</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Walking Speed over Time</h3>
+        <div class="chart-wrap"><canvas id="chart-gait-speed"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.25rem">
+      <h3>Clinical References</h3>
+      <table class="data-table">
+        <thead><tr><th>Metric</th><th>Threshold</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Walking speed</td><td>&gt;1.0 m/s healthy aging marker</td><td>Studenski et al. JAMA 2011</td></tr>
+          <tr><td>Double support time</td><td>20–30% of gait cycle</td><td>Clinical gait analysis norms</td></tr>
+          <tr><td>Step asymmetry</td><td>&lt;3% clinically relevant</td><td>Clinical gait analysis norms</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div><!-- /container -->
+
+<footer>
+  <div class="container">
+    Apple Health Clinical Dashboard ·
+    <a href="https://github.com/lorenzobrt/apple-health-clinical-dashboard" target="_blank" rel="noopener">GitHub</a>
+    · Data: Apple Watch (from Dec 2025) · Demo uses synthetic data · MIT License
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script>
+  window.HEALTH_DATA = {"generated_at": "2026-05-14T13:20:12.819842", "date_range_start": "2025-12-01T00:00:00+00:00", "date_range_end": "2026-05-01T06:00:05.555086+00:00", "n_total_records": 1871, "cardio": {"rhr_mean": 52.412917788764425, "rhr_classification": "athletic", "rhr_trend": {"slope_per_day": -0.02099603295815501, "r_squared": 0.08316854060537075, "p_value": 0.00032948175122776534, "n": 151}, "hrv_mean": 58.743475350141914, "hrv_classification": "good", "hrv_trend": {"slope_per_day": 0.047491130164939326, "r_squared": 0.19226859926030193, "p_value": 1.789387095600069e-08, "n": 151}, "vo2max_latest": 55.854799765434244, "vo2max_classification": "excellent", "hr_recovery_mean": null, "hr_recovery_classification": null, "hr_max_tanaka": 191.2}, "sleep": {"mean_duration_h": 7.475065219010301, "duration_classification": "optimal", "mean_efficiency_pct": 95.54214161649482, "efficiency_classification": "good", "mean_deep_pct": 17.984291229985068, "mean_rem_pct": 21.880538631926534, "mean_awake_pct": 4.457858383505203, "duration_trend": {"slope_per_day": -0.0011759305504298813, "r_squared": 0.011976726745487852, "p_value": 0.18101190204694112, "n": 151}, "n_nights": 151}, "activity": {"mean_daily_steps": 10247.47809298197, "steps_goal_pct": 102.4747809298197, "mean_active_energy_kcal": 377.12607015607705, "mean_exercise_min": 0.0, "total_distance_km": 0.0, "steps_trend": {"slope_per_day": -0.6262423836025105, "r_squared": 0.0003876444719023485, "p_value": 0.8103678965944713, "n": 151}}, "running": {"n_runs": 51, "total_distance_km": 467.65474266389214, "mean_pace_min_per_km": 5.106543923719654, "mean_cadence_spm": null, "mean_power_w": null, "mean_ground_contact_ms": null, "mean_vertical_osc_cm": null, "longest_run_km": 16.143596057849663}, "audio": {"mean_env_db": 61.24372004215487, "env_classification": "safe", "mean_headphone_db": null, "headphone_classification": null, "pct_time_above_safe": 13.90728476821192}, "gait": {"mean_walking_speed_ms": 1.342888900153238, "speed_classification": "normal", "mean_double_support_pct": 24.986918623006552, "mean_asymmetry_pct": 1.8119955696551706, "mean_step_length_m": null}, "body": {"weight_kg": 72.0, "height_m": 1.78, "bmi": 22.724403484408533, "body_fat_pct": null}, "correlations": {"hrv_vs_sleep_duration": null, "hrv_vs_rhr": -0.09907875056263739, "steps_vs_active_energy": 0.6261144239629544}, "age": 24};
+</script>
+<script src="app.js"></script>
+</body>
+</html>
