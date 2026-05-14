@@ -131,6 +131,25 @@ class Correlations:
 
 
 @dataclass
+class TimeSeries:
+    """Daily-aggregated arrays used by the front-end charts."""
+
+    labels: list[str] = field(default_factory=list)
+    rhr: list[float | None] = field(default_factory=list)
+    hrv: list[float | None] = field(default_factory=list)
+    steps: list[float | None] = field(default_factory=list)
+    active_energy: list[float | None] = field(default_factory=list)
+    audio: list[float | None] = field(default_factory=list)
+    sleep_duration: list[float | None] = field(default_factory=list)
+    walking_speed: list[float | None] = field(default_factory=list)
+    vo2max_dates: list[str] = field(default_factory=list)
+    vo2max_values: list[float] = field(default_factory=list)
+    run_dates: list[str] = field(default_factory=list)
+    run_distances: list[float] = field(default_factory=list)
+    run_paces: list[float] = field(default_factory=list)
+
+
+@dataclass
 class HealthReport:
     generated_at: datetime
     date_range_start: datetime
@@ -144,6 +163,7 @@ class HealthReport:
     gait: GaitStats | None
     body: BodyStats | None
     correlations: Correlations
+    series: TimeSeries = field(default_factory=TimeSeries)
     age: int = 24
 
 
@@ -490,6 +510,87 @@ def _analyze_correlations(
 # ---------------------------------------------------------------------------
 
 
+def _build_series(
+    health_records: list[HealthRecord],
+    sleep_records: list[SleepRecord],
+    workout_records: list[WorkoutRecord],
+) -> TimeSeries:
+    """Build daily time-series arrays for the front-end charts."""
+    series = TimeSeries()
+
+    # Calendar-day union of all daily-aggregable metrics
+    rhr_d = _daily_mean(_filter(health_records, "resting_heart_rate"))
+    hrv_d = _daily_mean(_filter(health_records, "hrv_sdnn"))
+    steps_d = _daily_sum(_filter(health_records, "step_count"))
+    energy_d = _daily_sum(_filter(health_records, "active_energy"))
+    audio_d = _daily_mean(_filter(health_records, "audio_exposure"))
+
+    speed_df = _filter(health_records, "walking_speed")
+    if not speed_df.empty and "km/hr" in str(speed_df["unit"].iloc[0]):
+        speed_df = speed_df.copy()
+        speed_df["value"] = speed_df["value"] / 3.6
+    speed_d = _daily_mean(speed_df)
+
+    # Sleep duration per night
+    sleep_d = pd.Series(dtype=float)
+    if sleep_records:
+        sdf = pd.DataFrame(
+            [
+                {"night": (r.start_date - timedelta(hours=12)), "value": r.value, "h": r.duration_hours}
+                for r in sleep_records
+            ]
+        )
+        sdf["night"] = pd.to_datetime(sdf["night"], utc=True).dt.normalize()
+        asleep_stages = {
+            "HKCategoryValueSleepAnalysisAsleepCore",
+            "HKCategoryValueSleepAnalysisAsleepDeep",
+            "HKCategoryValueSleepAnalysisAsleepREM",
+            "HKCategoryValueSleepAnalysisAsleep",
+        }
+        sleep_d = (
+            sdf[sdf["value"].isin(asleep_stages)]
+            .groupby("night")["h"]
+            .sum()
+        )
+
+    # Union of all calendar days
+    all_days = sorted(
+        set(rhr_d.index) | set(hrv_d.index) | set(steps_d.index)
+        | set(energy_d.index) | set(audio_d.index) | set(speed_d.index)
+        | set(sleep_d.index)
+    )
+
+    series.labels = [d.strftime("%Y-%m-%d") for d in all_days]
+
+    def _align(s: pd.Series) -> list[float | None]:  # type: ignore[type-arg]
+        return [float(s.get(d)) if d in s.index and pd.notna(s.get(d)) else None for d in all_days]
+
+    series.rhr = _align(rhr_d)
+    series.hrv = _align(hrv_d)
+    series.steps = _align(steps_d)
+    series.active_energy = _align(energy_d)
+    series.audio = _align(audio_d)
+    series.walking_speed = _align(speed_d)
+    series.sleep_duration = _align(sleep_d)
+
+    # VO2max — only on measurement days, not interpolated
+    vo2_df = _filter(health_records, "vo2_max")
+    if not vo2_df.empty:
+        series.vo2max_dates = [d.strftime("%Y-%m-%d") for d in vo2_df["date"]]
+        series.vo2max_values = [float(v) for v in vo2_df["value"]]
+
+    # Runs sequence
+    runs = [w for w in workout_records if "Running" in w.workout_type]
+    for r in runs:
+        if r.total_distance_km and r.total_distance_km > 0.5:
+            series.run_dates.append(r.start_date.strftime("%Y-%m-%d"))
+            series.run_distances.append(r.total_distance_km)
+            pace = r.duration_min / r.total_distance_km
+            series.run_paces.append(pace if 2.5 < pace < 12.0 else None)  # type: ignore[arg-type]
+
+    return series
+
+
 def build_report(
     health_records: list[HealthRecord],
     sleep_records: list[SleepRecord],
@@ -518,6 +619,7 @@ def build_report(
         gait=_analyze_gait(health_records),
         body=_analyze_body(health_records),
         correlations=_analyze_correlations(health_records, None),
+        series=_build_series(health_records, sleep_records, workout_records),
         age=age,
     )
 

@@ -114,16 +114,16 @@ def generate_demo_data(
             )
         )
 
-        # Walking speed
-        ws = float(np.clip(rng.normal(1.35, 0.08), 1.0, 1.8))
+        # Walking speed — Apple Health reports in km/hr (= m/s × 3.6).
+        ws_ms = float(np.clip(rng.normal(1.35, 0.08), 1.0, 1.8))
         health.append(
             HealthRecord(
                 record_type="walking_speed",
                 source_name="Apple Watch",
                 start_date=_ts(day, 9),
                 end_date=_ts(day, 9, 30),
-                value=ws,
-                unit="m/s",
+                value=ws_ms * 3.6,
+                unit="km/hr",
             )
         )
 
@@ -140,14 +140,16 @@ def generate_demo_data(
             )
         )
 
-        # Walking gait metrics
+        # Walking gait metrics — Apple Health reports these as fractions (0–1)
+        # despite the unit attribute being "%". The synthetic generator follows
+        # the same convention so the downstream conversion in analyze.py works.
         health.append(
             HealthRecord(
                 record_type="walking_double_support",
                 source_name="Apple Watch",
                 start_date=_ts(day, 9),
                 end_date=_ts(day, 9, 30),
-                value=float(np.clip(rng.normal(25, 2), 18, 35)),
+                value=float(np.clip(rng.normal(0.25, 0.02), 0.18, 0.35)),
                 unit="%",
             )
         )
@@ -157,7 +159,7 @@ def generate_demo_data(
                 source_name="Apple Watch",
                 start_date=_ts(day, 9),
                 end_date=_ts(day, 9, 30),
-                value=float(np.clip(rng.normal(1.8, 0.5), 0, 6)),
+                value=float(np.clip(rng.normal(0.018, 0.005), 0.0, 0.06)),
                 unit="%",
             )
         )
