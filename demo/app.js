@@ -230,6 +230,11 @@
           responsive: true, maintainAspectRatio: false, cutout: "68%",
           plugins: {
             legend: { display: true, position: "right", labels: { boxWidth: 10, padding: 12 } },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ${ctx.parsed.toFixed(1)}%`,
+              },
+            },
           },
         },
       });
@@ -303,6 +308,8 @@
     if (a.mean_headphone_db) {
       setText("kpi-audio-hp", fmt(a.mean_headphone_db, 1) + " dB");
       if (a.headphone_classification) setBadge("badge-audio-hp", a.headphone_classification);
+    } else {
+      hideKpi("kpi-audio-hp");
     }
     setText("kpi-audio-pct", fmt(a.pct_time_above_safe, 0) + "% above 70 dB");
 
@@ -333,6 +340,14 @@
   function setText(id, val) {
     const el = document.getElementById(id);
     if (el) el.textContent = val ?? "—";
+  }
+
+  /** Hide the whole KPI card containing the element with the given id. */
+  function hideKpi(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const card = el.closest(".kpi");
+    if (card) card.style.display = "none";
   }
 
   function setBadge(id, classification) {

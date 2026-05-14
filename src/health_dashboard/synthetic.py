@@ -114,6 +114,45 @@ def generate_demo_data(
             )
         )
 
+        # Exercise time ~30 min/day base (Apple's "exercise minutes" ring)
+        ex_min = float(np.clip(30 * weekly_pattern[i] + rng.normal(0, 8), 0, 120))
+        health.append(
+            HealthRecord(
+                record_type="exercise_time",
+                source_name="Apple Watch",
+                start_date=_ts(day, 0),
+                end_date=_ts(day, 23, 59),
+                value=ex_min,
+                unit="min",
+            )
+        )
+
+        # Walking + running distance ~6 km/day, scales with weekly pattern
+        dist_km = float(np.clip(6.0 * weekly_pattern[i] + rng.normal(0, 1.2), 0.5, 20))
+        health.append(
+            HealthRecord(
+                record_type="distance_walk_run",
+                source_name="Apple Watch",
+                start_date=_ts(day, 0),
+                end_date=_ts(day, 23, 59),
+                value=dist_km,
+                unit="km",
+            )
+        )
+
+        # Walking step length — Apple reports in cm.
+        step_len_cm = float(np.clip(rng.normal(75, 3), 60, 90))
+        health.append(
+            HealthRecord(
+                record_type="walking_step_length",
+                source_name="Apple Watch",
+                start_date=_ts(day, 9),
+                end_date=_ts(day, 9, 30),
+                value=step_len_cm,
+                unit="cm",
+            )
+        )
+
         # Walking speed — Apple Health reports in km/hr (= m/s × 3.6).
         ws_ms = float(np.clip(rng.normal(1.35, 0.08), 1.0, 1.8))
         health.append(
