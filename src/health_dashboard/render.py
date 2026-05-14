@@ -9,6 +9,7 @@ that works without a web server (file:// or GitHub Pages).
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -16,6 +17,9 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from health_dashboard.analyze import HealthReport, report_to_dict
 
 _DASHBOARD_DIR = Path(__file__).parent.parent.parent / "dashboard"
+
+# Static assets copied alongside index.html so the output is fully self-contained.
+_STATIC_FILES = ("styles.css", "app.js")
 
 
 def render_dashboard(
@@ -43,4 +47,10 @@ def render_dashboard(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(html, encoding="utf-8")
+
+    for asset in _STATIC_FILES:
+        src = tdir / asset
+        if src.exists():
+            shutil.copy2(src, output_path.parent / asset)
+
     return output_path
