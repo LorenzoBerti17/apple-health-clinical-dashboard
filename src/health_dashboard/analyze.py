@@ -175,6 +175,25 @@ def _daily_mean(df: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
     return df.groupby("day")["value"].mean()
 
 
+def _daily_sum(df: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+    """Aggregate to calendar-day sums (UTC) — for cumulative metrics like steps, kcal."""
+    if df.empty:
+        return pd.Series(dtype=float)
+    df = df.copy()
+    df["day"] = df["date"].dt.normalize()
+    return df.groupby("day")["value"].sum()
+
+
+# Unit conversion helpers — Apple Health sometimes uses km/hr and cm where
+# clinical norms expect m/s and m.
+def _kmh_to_ms(v: float) -> float:
+    return v / 3.6
+
+
+def _cm_to_m(v: float) -> float:
+    return v / 100.0
+
+
 def _linear_trend(series: pd.Series) -> TrendResult | None:  # type: ignore[type-arg]
     """Fit OLS trend over time; returns None if too few points."""
     s = series.dropna()
@@ -322,9 +341,11 @@ def _analyze_activity(records: list[HealthRecord]) -> ActivityStats | None:
     if steps_df.empty:
         return None
 
-    steps_daily = _daily_mean(steps_df)
-    energy_daily = _daily_mean(energy_df) if not energy_df.empty else pd.Series(dtype=float)
-    exercise_daily = _daily_mean(exercise_df) if not exercise_df.empty else pd.Series(dtype=float)
+    # Cumulative metrics: Apple Health stores sub-daily samples that must be
+    # SUMMED per day (not averaged) to recover the daily total.
+    steps_daily = _daily_sum(steps_df)
+    energy_daily = _daily_sum(energy_df) if not energy_df.empty else pd.Series(dtype=float)
+    exercise_daily = _daily_sum(exercise_df) if not exercise_df.empty else pd.Series(dtype=float)
 
     mean_steps = float(steps_daily.mean())
 
@@ -352,11 +373,15 @@ def _analyze_running(workouts: list[WorkoutRecord]) -> RunningStats | None:
     total_dist = sum(distances)
     longest = max(distances) if distances else None
 
-    # Pace: min/km from duration and distance
+    # Pace: min/km from duration and distance.
+    # Filter out short/indoor runs without reliable GPS (<0.5 km) which would
+    # otherwise produce nonsensical pace values.
     paces = []
     for r in runs:
-        if r.total_distance_km and r.total_distance_km > 0.1:
-            paces.append(r.duration_min / r.total_distance_km)
+        if r.total_distance_km and r.total_distance_km > 0.5:
+            pace = r.duration_min / r.total_distance_km
+            if 2.5 < pace < 12.0:  # plausible human running pace band
+                paces.append(pace)
     mean_pace = float(np.mean(paces)) if paces else None
 
     return RunningStats(
@@ -400,14 +425,31 @@ def _analyze_gait(records: list[HealthRecord]) -> GaitStats | None:
     asym_df = _filter(records, "walking_asymmetry")
     step_df = _filter(records, "walking_step_length")
 
-    mean_speed = float(speed_df["value"].mean())
+    # Apple Watch reports walking_speed in km/hr — convert to m/s for the
+    # Studenski clinical threshold (>1.0 m/s).
+    raw_speed = float(speed_df["value"].mean())
+    speed_unit = str(speed_df["unit"].iloc[0]) if not speed_df.empty else ""
+    mean_speed = _kmh_to_ms(raw_speed) if "km/hr" in speed_unit or "km/h" in speed_unit else raw_speed
+
+    # walking_step_length is reported in cm by Apple Health.
+    step_length_m: float | None = None
+    if not step_df.empty:
+        raw_step = float(step_df["value"].mean())
+        step_unit = str(step_df["unit"].iloc[0])
+        step_length_m = _cm_to_m(raw_step) if step_unit == "cm" else raw_step
+
+    # Apple Health reports walking_double_support and walking_asymmetry as
+    # fractions (0–1) despite the unit being labelled "%". Multiply by 100 to
+    # express as percentages, which is the clinical convention.
+    ds_pct = float(ds_df["value"].mean()) * 100 if not ds_df.empty else None
+    asym_pct = float(asym_df["value"].mean()) * 100 if not asym_df.empty else None
 
     return GaitStats(
         mean_walking_speed_ms=mean_speed,
         speed_classification=GAIT.classify_speed(mean_speed),
-        mean_double_support_pct=float(ds_df["value"].mean()) if not ds_df.empty else None,
-        mean_asymmetry_pct=float(asym_df["value"].mean()) if not asym_df.empty else None,
-        mean_step_length_m=float(step_df["value"].mean()) if not step_df.empty else None,
+        mean_double_support_pct=ds_pct,
+        mean_asymmetry_pct=asym_pct,
+        mean_step_length_m=step_length_m,
     )
 
 

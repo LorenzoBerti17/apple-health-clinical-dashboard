@@ -135,7 +135,9 @@ def _parse_float(s: str | None) -> float | None:
 
 
 def _iter_xml(xml_path: Path) -> Generator[etree._Element, None, None]:
-    """Yield Record, SleepAnalysis, and Workout elements via iterparse."""
+    """Yield Record and Workout elements via iterparse (Workout elements are
+    yielded only at their closing tag so any nested WorkoutStatistics children
+    are already attached)."""
     context = etree.iterparse(
         str(xml_path),
         events=("end",),
@@ -145,12 +147,22 @@ def _iter_xml(xml_path: Path) -> Generator[etree._Element, None, None]:
     for _, elem in context:
         yield elem
         elem.clear()
-        # Also clear preceding siblings to free memory
         while elem.getprevious() is not None:
             parent = elem.getparent()
             if parent is not None:
                 del parent[0]
             break
+
+
+# Apple Health WorkoutStatistics types we care about for distance / energy
+_WS_DISTANCE_TYPES = {
+    "HKQuantityTypeIdentifierDistanceWalkingRunning",
+    "HKQuantityTypeIdentifierDistanceCycling",
+    "HKQuantityTypeIdentifierDistanceSwimming",
+}
+_WS_ENERGY_TYPES = {
+    "HKQuantityTypeIdentifierActiveEnergyBurned",
+}
 
 
 def _after_cutoff(dt_str: str | None) -> bool:
@@ -243,6 +255,23 @@ def _handle_workout(
     if not _after_cutoff(start):
         return
 
+    # Legacy: totalDistance / totalEnergyBurned as attributes (older watchOS)
+    dist_km = _parse_float(elem.get("totalDistance"))
+    energy_kcal = _parse_float(elem.get("totalEnergyBurned"))
+
+    # Modern: WorkoutStatistics children (watchOS 10+).
+    if dist_km is None or energy_kcal is None:
+        for child in elem.iter("WorkoutStatistics"):
+            ws_type = child.get("type", "")
+            ws_sum = _parse_float(child.get("sum"))
+            ws_unit = child.get("unit", "")
+            if ws_sum is None:
+                continue
+            if dist_km is None and ws_type in _WS_DISTANCE_TYPES:
+                dist_km = ws_sum if ws_unit.lower() in ("km", "kilometre") else ws_sum / 1000.0 if ws_unit == "m" else ws_sum
+            elif energy_kcal is None and ws_type in _WS_ENERGY_TYPES:
+                energy_kcal = ws_sum
+
     try:
         out.append(
             WorkoutRecord(
@@ -251,8 +280,8 @@ def _handle_workout(
                 start_date=elem.get("startDate", ""),  # type: ignore[arg-type]
                 end_date=elem.get("endDate", ""),  # type: ignore[arg-type]
                 duration_min=float(elem.get("duration", 0)),
-                total_distance_km=_parse_float(elem.get("totalDistance")),
-                total_energy_kcal=_parse_float(elem.get("totalEnergyBurned")),
+                total_distance_km=dist_km,
+                total_energy_kcal=energy_kcal,
             )
         )
     except Exception:
