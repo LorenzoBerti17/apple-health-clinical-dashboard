@@ -1,0 +1,78 @@
+# ── Dati personali – MAI committare ──────────────────────────────────────────
+# NB: usiamo data/* invece di data/ per permettere a !data/.gitkeep di funzionare.
+data/*
+!data/.gitkeep
+*.xml
+*.zip
+export*/
+Export*/
+apple_health_export/
+out/
+*.csv
+*.parquet
+
+# demo/index.html è generato MA viene COMMITTATO apposta per GitHub Pages — non aggiungere demo/ qui.
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.dylib
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+.installed.cfg
+pip-wheel-metadata/
+MANIFEST
+
+# ── Ambienti virtuali ────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+!.env.example
+
+# ── uv / hatch ────────────────────────────────────────────────────────────────
+# uv.lock viene committato (app + CI riproducibile, non libreria)
+.hatch/
+
+# ── Testing & coverage ───────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+
+# ── Linting / type checking ──────────────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ── Editor / tooling locale ──────────────────────────────────────────────────
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+*~
+
+# ── Jupyter ──────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Output personale (non demo) ──────────────────────────────────────────────
+out/
+personal/
